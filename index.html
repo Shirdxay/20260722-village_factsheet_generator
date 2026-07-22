@@ -10,7 +10,7 @@
     <!-- Leaflet CSS & JS for Interactive Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <style>
         :root {
             --primary: #1e3a8a;
@@ -389,8 +389,10 @@
     <!-- Printable Factsheet Document -->
     <div class="page" id="factsheetContainer">
         <div style="text-align: center; padding: 80px 20px; color: var(--text-muted);" id="placeholderText">
-            <h2 style="font-weight: 600; font-size: 1.1rem; color: var(--text-dark);">Please select a village to generate the factsheet</h2>
-            <p style="margin-top: 8px; font-size: 0.85rem;">Choose from Batch, Province, District, and Village using the filters above.</p>
+            <h2 style="font-weight: 600; font-size: 1.1rem; color: var(--text-dark);">Please select a village to
+                generate the factsheet</h2>
+            <p style="margin-top: 8px; font-size: 0.85rem;">Choose from Batch, Province, District, and Village using the
+                filters above.</p>
         </div>
     </div>
 
@@ -731,10 +733,10 @@
 
                         <!-- Location Map Section (Bottom Left) -->
                         <div class="section-title" style="margin-top: 6px;">ແຜນທີ່ທີ່ຕັ້ງບ້ານ (Village Location Map)</div>
-                        ${hasValidCoords 
-                            ? `<div id="map"></div>` 
-                            : `<div class="no-map-msg">ບໍ່ມີຂໍ້ມູນພິກັດ GPS (No GPS Coordinates Available)</div>`
-                        }
+                        ${hasValidCoords
+                    ? `<div id="map"></div>`
+                    : `<div class="no-map-msg">ບໍ່ມີຂໍ້ມູນພິກັດ GPS (No GPS Coordinates Available)</div>`
+                }
                     </div>
 
                     <!-- Right Column: Crop Production Table -->
@@ -787,5 +789,4 @@
         }
     </script>
 </body>
-
 </html>
