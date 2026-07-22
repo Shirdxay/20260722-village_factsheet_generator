@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Village Profile Factsheet</title>
+    <!-- SheetJS for parsing Excel file dynamically -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #f0f6ff;
+            --secondary: #0f766e;
+            --secondary-light: #f0fdfa;
+            --border: #cbd5e1;
+            --bg-gray: #f8fafc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Phetsarath OT', 'Noto Serif Lao', 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            color: var(--text-dark);
+            padding: 20px;
+        }
+
+        /* Filter & Control Bar Styling */
+        .controls-container {
+            max-width: 950px;
+            margin: 0 auto 20px auto;
+            background: #ffffff;
+            padding: 20px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .controls-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.01em;
+        }
+
+        .file-upload-section {
+            background: var(--bg-gray);
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            background-color: #fff;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .filter-group select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-print {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 9px 20px;
+            font-size: 0.88rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.15s ease;
+        }
+
+        .btn-print:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* Printable Sheet Layout */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 12mm 14mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Factsheet Header */
+        .factsheet-header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .factsheet-header h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1.15;
+        }
+
+        .factsheet-header .subtitle {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .badge-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.78rem;
+            border: 1px solid #bfdbfe;
+        }
+
+        .badge-alt {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        /* Metrics Summary Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+
+        .metric-card {
+            background: var(--bg-gray);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px 4px;
+            text-align: center;
+        }
+
+        .metric-card .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .metric-card .label {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* Section Header - Clean & Professional */
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--secondary);
+            background: var(--secondary-light);
+            padding: 4px 8px;
+            border-left: 3px solid var(--secondary);
+            margin-top: 2px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+
+        /* Structured Tables */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.72rem;
+        }
+
+        table.data-table th, 
+        table.data-table td {
+            border: 1px solid var(--border);
+            padding: 3px 6px;
+            text-align: left;
+        }
+
+        table.data-table th {
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        table.data-table tr:nth-child(even) {
+            background-color: #fbfcfd;
+        }
+
+        .num-col {
+            text-align: right !important;
+        }
+
+        .text-box {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            background: var(--bg-gray);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-dark);
+            line-height: 1.35;
+        }
+
+        /* Print Settings */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .page {
+                box-shadow: none;
+                margin: 0;
+                width: 100%;
+                min-height: auto;
+                padding: 6mm 10mm;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 4mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Control & Filtering Panel -->
+    <div class="controls-container no-print">
+        <div class="controls-header">
+            <div class="controls-title">Village Factsheet Generator</div>
+            <button class="btn-print" onclick="window.print()">Print / Export PDF</button>
+        </div>
+        
+        <div class="file-upload-section">
+            <div style="font-size: 0.88rem;">
+                <label for="excelFile" style="font-weight: 600; margin-right: 8px;">Select Excel File:</label>
+                <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFileUpload(event)">
+            </div>
+            <span id="statusText" style="font-size: 0.82rem; color: var(--text-muted);">Attempting auto-load...</span>
+        </div>
+
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="batchSelect">1. ງວດຈັດຕັ້ງປະຕິບັດ (Batch)</label>
+                <select id="batchSelect" onchange="onBatchChange()" disabled>
+                    <option value="">-- ເລືອກງວດ --</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="provinceSelect">2. ແຂວງ (Province)</label>
+                <select id="provinceSelect" onchange="onProvinceChange()" disabled>
+                    <option value="">-- ເລືອກແຂວງ --</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="districtSelect">3. ເມືອງ (District)</label>
+                <select id="districtSelect" onchange="onDistrictChange()" disabled>
+                    <option value="">-- ເລືອກເມືອງ --</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="villageSelect">4. ບ້ານ (Village)</label>
+                <select id="villageSelect" onchange="onVillageChange()" disabled>
+                    <option value="">-- ເລືອກບ້ານ --</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Printable Factsheet Document -->
+    <div class="page" id="factsheetContainer">
+        <div style="text-align: center; padding: 80px 20px; color: var(--text-muted);" id="placeholderText">
+            <h2 style="font-weight: 600; font-size: 1.2rem; color: var(--text-dark);">Please select a village to generate the factsheet</h2>
+            <p style="margin-top: 8px; font-size: 0.88rem;">Choose from Batch, Province, District, and Village using the filters above.</p>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let hierarchy = {};
+
+        // Automatic load from local folder on initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('./20260604-export.xlsx')
+                .then(res => {
+                    if (!res.ok) throw new Error("File not found");
+                    return res.arrayBuffer();
+                })
+                .then(buffer => processExcelBuffer(buffer, "20260604-export.xlsx (Auto-loaded)"))
+                .catch(() => {
+                    document.getElementById('statusText').innerText = "Manual file selection required.";
+                });
+        });
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                processExcelBuffer(evt.target.result, file.name);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processExcelBuffer(buffer, filename) {
+            try {
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                
+                rawData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                buildHierarchy();
+                populateBatches();
+
+                document.getElementById('statusText').innerText = `Loaded: ${filename} (${rawData.length} records)`;
+                document.getElementById('statusText').style.color = '#0f766e';
+                document.getElementById('batchSelect').disabled = false;
+            } catch (err) {
+                alert("Error reading Excel file: " + err.message);
+            }
+        }
+
+        // Multi-level hierarchy: Batch -> Province -> District -> Villages
+        function buildHierarchy() {
+            hierarchy = {};
+            rawData.forEach(item => {
+                const batch = (item['7.ງວດຈັດຕັ້ງປະຕິບັດ:'] || 'Unassigned').toString().trim();
+                const prov = (item['1.ຊື່ແຂວງ'] || 'Unassigned').toString().trim();
+                const dist = (item['2.ຊື່ເມືອງ'] || 'Unassigned').toString().trim();
+
+                if (!hierarchy[batch]) hierarchy[batch] = {};
+                if (!hierarchy[batch][prov]) hierarchy[batch][prov] = {};
+                if (!hierarchy[batch][prov][dist]) hierarchy[batch][prov][dist] = [];
+
+                hierarchy[batch][prov][dist].push(item);
+            });
+        }
+
+        function populateBatches() {
+            const batchSelect = document.getElementById('batchSelect');
+            batchSelect.innerHTML = '<option value="">-- ເລືອກງວດ --</option>';
+
+            Object.keys(hierarchy).sort().forEach(batch => {
+                const opt = document.createElement('option');
+                opt.value = batch;
+                opt.textContent = `ງວດ ${batch}`;
+                batchSelect.appendChild(opt);
+            });
+
+            // Clear downstream options
+            resetSelect('provinceSelect', '-- ເລືອກແຂວງ --');
+            resetSelect('districtSelect', '-- ເລືອກເມືອງ --');
+            resetSelect('villageSelect', '-- ເລືອກບ້ານ --');
+        }
+
+        function onBatchChange() {
+            const batch = document.getElementById('batchSelect').value;
+            const provSelect = document.getElementById('provinceSelect');
+
+            resetSelect('provinceSelect', '-- ເລືອກແຂວງ --');
+            resetSelect('districtSelect', '-- ເລືອກເມືອງ --');
+            resetSelect('villageSelect', '-- ເລືອກບ້ານ --');
+
+            if (batch && hierarchy[batch]) {
+                provSelect.disabled = false;
+                Object.keys(hierarchy[batch]).sort().forEach(prov => {
+                    const opt = document.createElement('option');
+                    opt.value = prov;
+                    opt.textContent = prov;
+                    provSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function onProvinceChange() {
+            const batch = document.getElementById('batchSelect').value;
+            const prov = document.getElementById('provinceSelect').value;
+            const distSelect = document.getElementById('districtSelect');
+
+            resetSelect('districtSelect', '-- ເລືອກເມືອງ --');
+            resetSelect('villageSelect', '-- ເລືອກບ້ານ --');
+
+            if (batch && prov && hierarchy[batch][prov]) {
+                distSelect.disabled = false;
+                Object.keys(hierarchy[batch][prov]).sort().forEach(dist => {
+                    const opt = document.createElement('option');
+                    opt.value = dist;
+                    opt.textContent = dist;
+                    distSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function onDistrictChange() {
+            const batch = document.getElementById('batchSelect').value;
+            const prov = document.getElementById('provinceSelect').value;
+            const dist = document.getElementById('districtSelect').value;
+            const villSelect = document.getElementById('villageSelect');
+
+            resetSelect('villageSelect', '-- ເລືອກບ້ານ --');
+
+            if (batch && prov && dist && hierarchy[batch][prov][dist]) {
+                villSelect.disabled = false;
+                hierarchy[batch][prov][dist].forEach((vill, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.textContent = vill['4.ຊື່ບ້ານ'] || `ບ້ານ ${index + 1}`;
+                    villSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function onVillageChange() {
+            const batch = document.getElementById('batchSelect').value;
+            const prov = document.getElementById('provinceSelect').value;
+            const dist = document.getElementById('districtSelect').value;
+            const vIndex = document.getElementById('villageSelect').value;
+
+            if (vIndex !== "" && hierarchy[batch][prov][dist][vIndex]) {
+                renderFactsheet(hierarchy[batch][prov][dist][vIndex]);
+            }
+        }
+
+        function resetSelect(id, placeholder) {
+            const el = document.getElementById(id);
+            el.innerHTML = `<option value="">${placeholder}</option>`;
+            el.disabled = true;
+        }
+
+        function renderFactsheet(d) {
+            const container = document.getElementById('factsheetContainer');
+
+            const v = (key, suffix = '') => {
+                const val = d[key];
+                if (val === undefined || val === null || val === '' || val === 'nan' || Number.isNaN(val)) return '-';
+                return `${val} ${suffix}`.trim();
+            };
+
+            const num = (key) => {
+                const val = parseFloat(d[key]);
+                return isNaN(val) ? 0 : val;
+            };
+
+            // Full list of 19 Crop/Plant Categories
+            const allCrops = [
+                { name: 'ເຂົ້ານານ້ຳຝົນ (Rainfed Paddy)', area: 'ເນື້ອທີ່ປູກເຂົ້ານານ້ຳຝົນ:', hh: 'ຈຳນວນຄົວເຮືອນທີ່ປູກເຂົ້ານານ້ຳຝົນ(hh):' },
+                { name: 'ເຂົ້ານານ້ຳຊົນລະປະທານ (Irrigated Paddy)', area: 'ເນື້ອທີ່ປູກເຂົ້ານານ້ຳຊົນລະປະທານ:', hh: 'ຈຳນວນຄົວເຮືອນທີ່ປູກເຂົ້ານານ້ຳຊົນລະປະທານ(hh):' },
+                { name: 'ເຂົ້າໄຮ່ (Upland Rice)', area: 'ເນື້ອທີ່ປູກເຂົ້າໄຮ່:', hh: 'ຈຳນວນຄົວເຮືອນທີ່ປູກເຂົ້າໄຮ່:' },
+                { name: 'ສາລີ (Maize)', area: 'ພື້ນທີ່ປູກສາລີ(ha)', hh: 'ຄອບຄົວທີ່ປູກສາລີ(hh)' },
+                { name: 'ມັນຝຣັ່ງ (Potato)', area: 'ພື້ນທີ່ປູກມັນຝຣັ່ງ(ha)', hh: 'ຄອບຄົວທີ່ປູກມັນຝຣັ່ງ(hh)' },
+                { name: 'ໝາກເດືອຍ (Job\'s Tears)', area: 'ພື້ນທີ່ປູກໝາກເດືອຍ(ha)', hh: 'ຄອບຄົວທີ່ປູກໝາກເດືອຍ(hh)' },
+                { name: 'ເຜືອກ (Taro)', area: 'ພື້ນທີ່ປູກເຜືອກ(ha)', hh: 'ຄອບຄົວທີ່ປູກເຜືອກ(hh)' },
+                { name: 'ຖົ່ວ (Beans)', area: 'ພື້ນທີ່ປູກຖົ່ວ(ha)', hh: 'ຄອບຄົວທີ່ປູກຖົ່ວ(hh)' },
+                { name: 'ມັນຕົ້ນ (Cassava)', area: 'ພື້ນທີ່ປູກມັນຕົ້ນ(ha)', hh: 'ຄອບຄົວທີ່ປູກມັນຕົ້ນ(hh)' },
+                { name: 'ໝາກຄ່າ (Mak Kha)', area: 'ພື້ນທີ່ປູກໝາກຄ່າ(ha)', hh: 'ຄອບຄົວທີ່ປູກໝາກຄ່າ(hh)' },
+                { name: 'ໝາກແໜ່ງ (Cardamom)', area: 'ພື້ນທີ່ປູກໝາກແໜ່ງ(ha)', hh: 'ຄອບຄົວທີ່ປູກໝາກແໜ່ງ(hh)' },
+                { name: 'ກາເຟ (Coffee)', area: 'ພື້ນທີ່ປູກກາເຟ(ha)', hh: 'ຄອບຄົວທີ່ປູກກາເຟ(hh)' },
+                { name: 'ຊາ (Tea)', area: 'ພື້ນທີ່ປູກຊາ(ha)', hh: 'ຄອບຄົວທີ່ປູກຊາ(hh)' },
+                { name: 'ຕົ້ນໂບງ (Bong Tree)', area: 'ພື້ນທີ່ປູກຕົ້ນໂບງ(ha)', hh: 'ຄອບຄົວທີ່ປູກຕົ້ນໂບງ(hh)' },
+                { name: 'ຕົ້ນຢາງ (Rubber)', area: 'ພື້ນທີ່ປູກຕົ້ນຢາງ(ha)', hh: 'ຄອບຄົວທີ່ປູກຕົ້ນຢາງ(hh)' },
+                { name: 'ອ້ອຍ (Sugarcane)', area: 'ພື້ນທີ່ປູກອ້ອຍ(ha)', hh: 'ຄອບຄົວທີ່ປູກອ້ອຍ(hh)' },
+                { name: 'ແຂມ (Broom Grass)', area: 'ພື້ນທີ່ປູກແຂມ(ha)', hh: 'ຄອບຄົວທີ່ປູກແຂມ(hh)' },
+                { name: 'ທົ່ງຫຍ້າປູກລ້ຽງສັດ (Pasture)', area: 'ທົ່ງຫຍ້າປູກລ້ຽງສັດ(ha)', hh: 'ຄອບຄົວທີ່ປູກຫຍ້າ(hh)' },
+                { name: 'ພືດຊະນິດອື່ນໆ (Other Crops)', area: 'ພືດຊະນິດອື່ນໆ(ha)', hh: 'ຄອບຄົວທີ່ປູກພືດຊະນິດອື່ນໆ(hh)' }
+            ];
+
+            const cropTableRows = allCrops.map(c => `
+                <tr>
+                    <td>${c.name}</td>
+                    <td class="num-col">${num(c.area)} </td>
+                    <td class="num-col">${num(c.hh)} </td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <!-- Factsheet Header -->
+                <div class="factsheet-header">
+                    <div>
+                        <div class="subtitle">Community Livelihoods Enhancement and Resilience Project</div>
+                        <h1>ບ້ານ ${v('4.ຊື່ບ້ານ')} (No. ${v('ລຳດັບ')})</h1>
+                        <div style="font-size: 0.88rem; color: var(--text-dark); margin-top: 3px;">
+                            ເມືອງ: <strong>${v('2.ຊື່ເມືອງ')}</strong> | ແຂວງ: <strong>${v('1.ຊື່ແຂວງ')}</strong>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="badge-group">
+                            <span class="badge">ລະຫັດບ້ານ: ${v('ລະຫັດບ້ານ')}</span>
+                            <span class="badge badge-alt">SDC: ${v('SDC village')}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">ງວດຈັດຕັ້ງປະຕິບັດ: ${v('7.ງວດຈັດຕັ້ງປະຕິບັດ:')}</div>
+                    </div>
+                </div>
+
+                <!-- Demographics Highlight Grid -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="value">${v('1. ຈຳນວນພົນລະເມືອງ:')}</div>
+                        <div class="label">ພົນລະເມືອງ (ຄົນ)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="value">${v('2. ຈຳນວນເພດຍິງ:')}</div>
+                        <div class="label">ເພດຍິງ (ຄົນ)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="value">${v('3. ຈຳນວນຫຼັງຄາເຮືອນ:')}</div>
+                        <div class="label">ຫຼັງຄາເຮືອນ</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="value">${v('4. ຈຳນວນຄອບຄົວ:')}</div>
+                        <div class="label">ຄອບຄົວ (HH)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="value" style="color: #059669;">${v('F-HH')}</div>
+                        <div class="label">ຄອບຄົວແມ່ເຮືອນ (F-HH)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="value" style="color: #dc2626;">${v('5. ຈຳນວນຄອບຄົວທຸກຍາກ:')}</div>
+                        <div class="label">ຄອບຄົວທຸກຍາກ (HH)</div>
+                    </div>
+                </div>
+
+                <!-- General Info & Land Area -->
+                <div class="grid-2col">
+                    <div>
+                        <div class="section-title">ຂໍ້ມູນທົ່ວໄປ ແລະ ທີ່ຕັ້ງ (Location & Admin)</div>
+                        <table class="data-table">
+                            <tr><th>ປະເພດບ້ານ (Village Type)</th><td>${v('5.ປະເພດບ້ານ')}</td></tr>
+                            <tr><th>ຊົນເຜົ່າ (Ethnic Group)</th><td>${v('6. ຊົນເຜົ່າ:')}</td></tr>
+                            <tr><th>ທີ່ຕັ້ງ Lat (N)</th><td>${v('6.1.ທີ່ຕັ້ງຂອງບ້ານ:N')}</td></tr>
+                            <tr><th>ທີ່ຕັ້ງ Long (E)</th><td>${v('6.2.ທີ່ຕັ້ງຂອງບ້ານ:E')}</td></tr>
+                            <tr><th>ໄລຍະທາງຫາເມືອງ</th><td>${v('8.ໄລຍະທາງຈາກບ້ານຫາເມືອງ:', 'km')}</td></tr>
+                        </table>
+                    </div>
+
+                    <div>
+                        <div class="section-title">ເນື້ອທີ່ດິນ ແລະ ແຫຼ່ງນ້ຳ (Land Area & Water - ha)</div>
+                        <table class="data-table">
+                            <tr><th>1. ເນື້ອທີ່ປົກຄອງ</th><td class="num-col">${v('1. ເນື້ອທີ່ປົກຄອງຂອງບ້ານ(ha):')}</td></tr>
+                            <tr><th>2. ເນື້ອທີ່ການຜະລິດ</th><td class="num-col">${v('2. ເນື້໋ອທີ່ການຜະລິດຂອງບ້ານ(ha):')}</td></tr>
+                            <tr><th>3. ເນື້ອທີ່ປ່າໄມ້</th><td class="num-col">${v('3. ເນື້ອທີ່ປ່າໄມ້ຂອງບ້ານ(ha):')}</td></tr>
+                            <tr><th>4. ເນື້ອທີ່ປ່າສະຫງວນ</th><td class="num-col">${v('4. ເນື້ອທີ່ປ່າສະຫງວນ:')}</td></tr>
+                            <tr><th>5. ເນື້ອທີ່ປ່າປ້ອງກັນ</th><td class="num-col">${v('5.ເນື້ອທີ່ປ່າປ້ອງກັນ:')}</td></tr>
+                            <tr><th>6. ແຫຼ່ງນ້ຳ/ຫ້ວຍ/ໜອງ</th><td>${v('6. ແມ່ນ້ຳ,ລຳຫ້ວຍ,ອ່າງເກັບນ້ຳ,ຄອງ, ໜອງ ແລະ ບຶງ:')}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Accessibility -->
+                <div>
+                    <div class="section-title">ເງື່ອນໄຂການເຂົ້າເຖິງບ້ານ (Village Access)</div>
+                    <div class="text-box">
+                        ${v('9.ເງື່ອນໄຂການເຂົ້າເຖິງບ້ານ:')}
+                    </div>
+                </div>
+
+                <!-- Agriculture and Livestock Grid -->
+                <div class="grid-2col">
+                    <!-- Livestock Table -->
+                    <div>
+                        <div class="section-title">ຂໍ້ມູນການລ້ຽງສັດ (Livestock Statistics)</div>
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>ປະເພດສັດ</th><th class="num-col">ຈຳນວນ (ໂຕ)</th><th class="num-col">ຄົວເຮືອນ (HH)</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>ງົວ (Cattle)</td><td class="num-col">${v('ຈຳນວນງົວ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງງົວ')}</td></tr>
+                                <tr><td>ຄວາຍ (Buffalo)</td><td class="num-col">${v('ຈຳນວນຄວາຍ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງຄວາຍ')}</td></tr>
+                                <tr><td>ໝູ (Pigs)</td><td class="num-col">${v('ຈຳນວນໝູ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງໝູ')}</td></tr>
+                                <tr><td>ແບ້ (Goats)</td><td class="num-col">${v('ຈຳນວນແບ້')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງແບ້')}</td></tr>
+                                <tr><td>ໜອງປາ (Fish Ponds)</td><td class="num-col">${v('ຈຳນວນໜອງປາ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງປາ')}</td></tr>
+                                <tr><td>ໄກ່ (Poultry)</td><td class="num-col">${v('ຈຳນວນໄກ່')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງໄກ່')}</td></tr>
+                                <tr><td>ເປັດ (Ducks)</td><td class="num-col">${v('ຈຳນວນເປັດ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງເປັດ')}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Crop Production Table Fully Displayed -->
+                    <div>
+                        <div class="section-title">ຂໍ້ມູນການປູກພືດ (Crop Production)</div>
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>ປະເພດພືດ</th><th class="num-col">ເນື້ອທີ່ (ha)</th><th class="num-col">ຄົວເຮືອນ (HH)</th></tr>
+                            </thead>
+                            <tbody>
+                                ${cropTableRows}
+                                <tr>
+                                    <td>ອື່ນໆ (Other Info)</td>
+                                    <td colspan="2" class="num-col">${v('ອື່ນໆ')}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted);">
+                    <div><strong>Remarks:</strong> ${v('Remarks')}</div>
+                    <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString('lo-LA')}</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
