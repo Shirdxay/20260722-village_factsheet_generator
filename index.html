@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <html lang="lo">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Village Profile Factsheet</title>
     <!-- SheetJS for parsing Excel file dynamically -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Leaflet CSS & JS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
         :root {
             --primary: #1e3a8a;
@@ -28,31 +33,31 @@
         body {
             background-color: #f1f5f9;
             color: var(--text-dark);
-            padding: 20px;
+            padding: 15px;
         }
 
         /* Filter & Control Bar Styling */
         .controls-container {
             max-width: 950px;
-            margin: 0 auto 20px auto;
+            margin: 0 auto 15px auto;
             background: #ffffff;
-            padding: 20px 24px;
+            padding: 16px 20px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .controls-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
+            padding-bottom: 8px;
         }
 
         .controls-title {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: var(--primary);
             letter-spacing: -0.01em;
@@ -61,9 +66,9 @@
         .file-upload-section {
             background: var(--bg-gray);
             border: 1px solid var(--border);
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 6px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -73,18 +78,18 @@
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 10px;
+            margin-bottom: 12px;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
         }
 
         .filter-group label {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 600;
             color: var(--text-muted);
             text-transform: uppercase;
@@ -92,10 +97,10 @@
         }
 
         .filter-group select {
-            padding: 8px 12px;
+            padding: 6px 10px;
             border: 1px solid var(--border);
             border-radius: 6px;
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             background-color: #fff;
             color: var(--text-dark);
             outline: none;
@@ -110,8 +115,8 @@
             background-color: var(--primary);
             color: white;
             border: none;
-            padding: 9px 20px;
-            font-size: 0.88rem;
+            padding: 8px 18px;
+            font-size: 0.85rem;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
@@ -125,44 +130,52 @@
         /* Printable Sheet Layout */
         .page {
             width: 210mm;
-            min-height: 297mm;
+            max-height: 297mm;
             padding: 12mm 14mm;
             margin: 0 auto;
             background: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             border-radius: 4px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 6px;
+            overflow: hidden;
         }
 
         /* Factsheet Header */
         .factsheet-header {
             border-bottom: 2px solid var(--primary);
-            padding-bottom: 8px;
+            padding-bottom: 4px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
         }
 
         .factsheet-header h1 {
-            font-size: 1.45rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--primary);
-            line-height: 1.15;
+            line-height: 1.1;
         }
 
         .factsheet-header .subtitle {
-            font-size: 0.78rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.04em;
+        }
+
+        .factsheet-header .subtitleEng {
+            font-size: 0.58rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
             margin-bottom: 2px;
         }
 
         .badge-group {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             align-items: center;
             justify-content: flex-end;
         }
@@ -170,10 +183,10 @@
         .badge {
             background: var(--primary-light);
             color: var(--primary);
-            padding: 3px 8px;
-            border-radius: 4px;
+            padding: 2px 6px;
+            border-radius: 3px;
             font-weight: 600;
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             border: 1px solid #bfdbfe;
         }
 
@@ -186,41 +199,42 @@
         /* Metrics Summary Cards Grid */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
         }
 
         .metric-card {
             background: var(--bg-gray);
             border: 1px solid var(--border);
             border-radius: 4px;
-            padding: 8px 4px;
+            padding: 4px 2px;
             text-align: center;
         }
 
         .metric-card .value {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--primary);
+            line-height: 1.1;
         }
 
         .metric-card .label {
-            font-size: 0.68rem;
+            font-size: 0.62rem;
             color: var(--text-muted);
-            margin-top: 2px;
+            margin-top: 1px;
             font-weight: 500;
         }
 
-        /* Section Header - Clean & Professional */
+        /* Section Header */
         .section-title {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 700;
             color: var(--secondary);
             background: var(--secondary-light);
-            padding: 4px 8px;
+            padding: 2px 6px;
             border-left: 3px solid var(--secondary);
-            margin-top: 2px;
-            margin-bottom: 6px;
+            margin-top: 1px;
+            margin-bottom: 3px;
             text-transform: uppercase;
             letter-spacing: 0.02em;
         }
@@ -228,7 +242,7 @@
         .grid-2col {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 8px;
             align-items: start;
         }
 
@@ -236,13 +250,14 @@
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.72rem;
+            font-size: 0.65rem;
+            line-height: 1.05;
         }
 
-        table.data-table th, 
+        table.data-table th,
         table.data-table td {
             border: 1px solid var(--border);
-            padding: 3px 6px;
+            padding: 1.8px 4px;
             text-align: left;
         }
 
@@ -261,20 +276,45 @@
         }
 
         .text-box {
-            font-size: 0.75rem;
-            padding: 6px 10px;
+            font-size: 0.68rem;
+            padding: 4px 8px;
             background: var(--bg-gray);
             border: 1px solid var(--border);
             border-radius: 4px;
             color: var(--text-dark);
-            line-height: 1.35;
+            line-height: 1.25;
+        }
+
+        /* Leaflet Map Styling */
+        #map {
+            width: 100%;
+            height: 165px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-top: 4px;
+            z-index: 1;
+        }
+
+        .no-map-msg {
+            height: 165px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-gray);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            margin-top: 4px;
         }
 
         /* Print Settings */
         @media print {
-            body {
+            html, body {
+                height: 100%;
                 background: none;
                 padding: 0;
+                margin: 0;
             }
 
             .no-print {
@@ -285,8 +325,17 @@
                 box-shadow: none;
                 margin: 0;
                 width: 100%;
-                min-height: auto;
+                height: 100%;
+                max-height: 290mm;
                 padding: 6mm 10mm;
+                border-radius: 0;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+
+            .leaflet-tile-container img {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             @page {
@@ -296,6 +345,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- Control & Filtering Panel -->
@@ -304,9 +354,9 @@
             <div class="controls-title">Village Factsheet Generator</div>
             <button class="btn-print" onclick="window.print()">Print / Export PDF</button>
         </div>
-        
+
         <div class="file-upload-section">
-            <div style="font-size: 0.88rem;">
+            <div style="font-size: 0.85rem;">
                 <label for="excelFile" style="font-weight: 600; margin-right: 8px;">Select Excel File:</label>
                 <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFileUpload(event)">
             </div>
@@ -344,14 +394,15 @@
     <!-- Printable Factsheet Document -->
     <div class="page" id="factsheetContainer">
         <div style="text-align: center; padding: 80px 20px; color: var(--text-muted);" id="placeholderText">
-            <h2 style="font-weight: 600; font-size: 1.2rem; color: var(--text-dark);">Please select a village to generate the factsheet</h2>
-            <p style="margin-top: 8px; font-size: 0.88rem;">Choose from Batch, Province, District, and Village using the filters above.</p>
+            <h2 style="font-weight: 600; font-size: 1.1rem; color: var(--text-dark);">Please select a village to generate the factsheet</h2>
+            <p style="margin-top: 8px; font-size: 0.85rem;">Choose from Batch, Province, District, and Village using the filters above.</p>
         </div>
     </div>
 
     <script>
         let rawData = [];
         let hierarchy = {};
+        let mapInstance = null;
 
         // Automatic load from local folder on initialization
         window.addEventListener('DOMContentLoaded', () => {
@@ -371,7 +422,7 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(evt) {
+            reader.onload = function (evt) {
                 processExcelBuffer(evt.target.result, file.name);
             };
             reader.readAsArrayBuffer(file);
@@ -381,7 +432,7 @@
             try {
                 const workbook = XLSX.read(buffer, { type: 'array' });
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                
+
                 rawData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
                 buildHierarchy();
@@ -422,7 +473,6 @@
                 batchSelect.appendChild(opt);
             });
 
-            // Clear downstream options
             resetSelect('provinceSelect', '-- ເລືອກແຂວງ --');
             resetSelect('districtSelect', '-- ເລືອກເມືອງ --');
             resetSelect('villageSelect', '-- ເລືອກບ້ານ --');
@@ -502,6 +552,12 @@
             el.disabled = true;
         }
 
+        function formatNum(value) {
+            if (value === null || value === undefined || value === "") return "";
+            const num = Number(value);
+            return !isNaN(num) ? num.toLocaleString('lo-LA') : value;
+        }
+
         function renderFactsheet(d) {
             const container = document.getElementById('factsheetContainer');
 
@@ -515,6 +571,11 @@
                 const val = parseFloat(d[key]);
                 return isNaN(val) ? 0 : val;
             };
+
+            // Latitude and Longitude Parsing
+            const lat = parseFloat(d['6.1.ທີ່ຕັ້ງຂອງບ້ານ:N']);
+            const lon = parseFloat(d['6.2.ທີ່ຕັ້ງຂອງບ້ານ:E']);
+            const hasValidCoords = !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
 
             // Full list of 19 Crop/Plant Categories
             const allCrops = [
@@ -542,8 +603,8 @@
             const cropTableRows = allCrops.map(c => `
                 <tr>
                     <td>${c.name}</td>
-                    <td class="num-col">${num(c.area)} </td>
-                    <td class="num-col">${num(c.hh)} </td>
+                    <td class="num-col">${num(c.area)}</td>
+                    <td class="num-col">${num(c.hh)}</td>
                 </tr>
             `).join('');
 
@@ -551,9 +612,10 @@
                 <!-- Factsheet Header -->
                 <div class="factsheet-header">
                     <div>
-                        <div class="subtitle">Community Livelihoods Enhancement and Resilience Project</div>
-                        <h1>ບ້ານ ${v('4.ຊື່ບ້ານ')} (No. ${v('ລຳດັບ')})</h1>
-                        <div style="font-size: 0.88rem; color: var(--text-dark); margin-top: 3px;">
+                        <div class="subtitle">ໂຄງການປັບປຸງຊີວິດການເປັນຢູ່ ແລະ ການປັບຕົວກັບການປ່ຽນແປງດິນຟ້າອາກາດ</div>
+                        <div class="subtitleEng">Community Livelihoods Enhancement and Resilience (CLEAR) Project</div>
+                        <h1>ບ້ານ ${v('4.ຊື່ບ້ານ')}</h1>
+                        <div style="font-size: 0.85rem; color: var(--text-dark); margin-top: 2px;">
                             ເມືອງ: <strong>${v('2.ຊື່ເມືອງ')}</strong> | ແຂວງ: <strong>${v('1.ຊື່ແຂວງ')}</strong>
                         </div>
                     </div>
@@ -562,7 +624,7 @@
                             <span class="badge">ລະຫັດບ້ານ: ${v('ລະຫັດບ້ານ')}</span>
                             <span class="badge badge-alt">SDC: ${v('SDC village')}</span>
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">ງວດຈັດຕັ້ງປະຕິບັດ: ${v('7.ງວດຈັດຕັ້ງປະຕິບັດ:')}</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">ງວດຈັດຕັ້ງປະຕິບັດ: ${v('7.ງວດຈັດຕັ້ງປະຕິບັດ:')}</div>
                     </div>
                 </div>
 
@@ -583,10 +645,6 @@
                     <div class="metric-card">
                         <div class="value">${v('4. ຈຳນວນຄອບຄົວ:')}</div>
                         <div class="label">ຄອບຄົວ (HH)</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="value" style="color: #059669;">${v('F-HH')}</div>
-                        <div class="label">ຄອບຄົວແມ່ເຮືອນ (F-HH)</div>
                     </div>
                     <div class="metric-card">
                         <div class="value" style="color: #dc2626;">${v('5. ຈຳນວນຄອບຄົວທຸກຍາກ:')}</div>
@@ -610,11 +668,11 @@
                     <div>
                         <div class="section-title">ເນື້ອທີ່ດິນ ແລະ ແຫຼ່ງນ້ຳ (Land Area & Water - ha)</div>
                         <table class="data-table">
-                            <tr><th>1. ເນື້ອທີ່ປົກຄອງ</th><td class="num-col">${v('1. ເນື້ອທີ່ປົກຄອງຂອງບ້ານ(ha):')}</td></tr>
-                            <tr><th>2. ເນື້ອທີ່ການຜະລິດ</th><td class="num-col">${v('2. ເນື້໋ອທີ່ການຜະລິດຂອງບ້ານ(ha):')}</td></tr>
-                            <tr><th>3. ເນື້ອທີ່ປ່າໄມ້</th><td class="num-col">${v('3. ເນື້ອທີ່ປ່າໄມ້ຂອງບ້ານ(ha):')}</td></tr>
-                            <tr><th>4. ເນື້ອທີ່ປ່າສະຫງວນ</th><td class="num-col">${v('4. ເນື້ອທີ່ປ່າສະຫງວນ:')}</td></tr>
-                            <tr><th>5. ເນື້ອທີ່ປ່າປ້ອງກັນ</th><td class="num-col">${v('5.ເນື້ອທີ່ປ່າປ້ອງກັນ:')}</td></tr>
+                            <tr><th>1. ເນື້ອທີ່ປົກຄອງ</th><td class="num-col">${formatNum(v('1. ເນື້ອທີ່ປົກຄອງຂອງບ້ານ(ha):'))}</td></tr>
+                            <tr><th>2. ເນື້ອທີ່ການຜະລິດ</th><td class="num-col">${formatNum(v('2. ເນື້໋ອທີ່ການຜະລິດຂອງບ້ານ(ha):'))}</td></tr>
+                            <tr><th>3. ເນື້ອທີ່ປ່າໄມ້</th><td class="num-col">${formatNum(v('3. ເນື້ອທີ່ປ່າໄມ້ຂອງບ້ານ(ha):'))}</td></tr>
+                            <tr><th>4. ເນື້ອທີ່ປ່າສະຫງວນ</th><td class="num-col">${formatNum(v('4. ເນື້ອທີ່ປ່າສະຫງວນ:'))}</td></tr>
+                            <tr><th>5. ເນື້ອທີ່ປ່າປ້ອງກັນ</th><td class="num-col">${formatNum(v('5.ເນື້ອທີ່ປ່າປ້ອງກັນ:'))}</td></tr>
                             <tr><th>6. ແຫຼ່ງນ້ຳ/ຫ້ວຍ/ໜອງ</th><td>${v('6. ແມ່ນ້ຳ,ລຳຫ້ວຍ,ອ່າງເກັບນ້ຳ,ຄອງ, ໜອງ ແລະ ບຶງ:')}</td></tr>
                         </table>
                     </div>
@@ -630,7 +688,7 @@
 
                 <!-- Agriculture and Livestock Grid -->
                 <div class="grid-2col">
-                    <!-- Livestock Table -->
+                    <!-- Left Column: Livestock Table + Location Map -->
                     <div>
                         <div class="section-title">ຂໍ້ມູນການລ້ຽງສັດ (Livestock Statistics)</div>
                         <table class="data-table">
@@ -638,18 +696,53 @@
                                 <tr><th>ປະເພດສັດ</th><th class="num-col">ຈຳນວນ (ໂຕ)</th><th class="num-col">ຄົວເຮືອນ (HH)</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td>ງົວ (Cattle)</td><td class="num-col">${v('ຈຳນວນງົວ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງງົວ')}</td></tr>
-                                <tr><td>ຄວາຍ (Buffalo)</td><td class="num-col">${v('ຈຳນວນຄວາຍ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງຄວາຍ')}</td></tr>
-                                <tr><td>ໝູ (Pigs)</td><td class="num-col">${v('ຈຳນວນໝູ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງໝູ')}</td></tr>
-                                <tr><td>ແບ້ (Goats)</td><td class="num-col">${v('ຈຳນວນແບ້')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງແບ້')}</td></tr>
-                                <tr><td>ໜອງປາ (Fish Ponds)</td><td class="num-col">${v('ຈຳນວນໜອງປາ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງປາ')}</td></tr>
-                                <tr><td>ໄກ່ (Poultry)</td><td class="num-col">${v('ຈຳນວນໄກ່')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງໄກ່')}</td></tr>
-                                <tr><td>ເປັດ (Ducks)</td><td class="num-col">${v('ຈຳນວນເປັດ')}</td><td class="num-col">${v('ຈຳນວນຄົວເຮືອນລ້ຽງເປັດ')}</td></tr>
+                                <tr>
+                                    <td>ງົວ (Cattle)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນງົວ'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງງົວ'))}</td>
+                                </tr>
+                                <tr>
+                                    <td>ຄວາຍ (Buffalo)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄວາຍ'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງຄວາຍ'))}</td>
+                                </tr>
+                                <tr>
+                                    <td>ໝູ (Pigs)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນໝູ'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງໝູ'))}</td>
+                                </tr>
+                                <tr>
+                                    <td>ແບ້ (Goats)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນແບ້'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງແບ້'))}</td>
+                                </tr>
+                                <tr>
+                                    <td>ໜອງປາ (Fish Ponds)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນໜອງປາ'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງປາ'))}</td>
+                                </tr>
+                                <tr>
+                                    <td>ໄກ່ (Poultry)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນໄກ່'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງໄກ່'))}</td>
+                                </tr>
+                                <tr>
+                                    <td>ເປັດ (Ducks)</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນເປັດ'))}</td>
+                                    <td class="num-col">${formatNum(v('ຈຳນວນຄົວເຮືອນລ້ຽງເປັດ'))}</td>
+                                </tr>
                             </tbody>
                         </table>
+
+                        <!-- Location Map Section (Bottom Left) -->
+                        <div class="section-title" style="margin-top: 6px;">ແຜນທີ່ທີ່ຕັ້ງບ້ານ (Village Location Map)</div>
+                        ${hasValidCoords 
+                            ? `<div id="map"></div>` 
+                            : `<div class="no-map-msg">ບໍ່ມີຂໍ້ມູນພິກັດ GPS (No GPS Coordinates Available)</div>`
+                        }
                     </div>
 
-                    <!-- Crop Production Table Fully Displayed -->
+                    <!-- Right Column: Crop Production Table -->
                     <div>
                         <div class="section-title">ຂໍ້ມູນການປູກພືດ (Crop Production)</div>
                         <table class="data-table">
@@ -668,12 +761,36 @@
                 </div>
 
                 <!-- Footer -->
-                <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted);">
-                    <div><strong>Remarks:</strong> ${v('Remarks')}</div>
-                    <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString('lo-LA')}</div>
+                <div style="margin-top: auto; padding-top: 4px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted);">
+                    <div><strong>ໝາຍເຫດ (Remarks):</strong> ${v('Remarks')}</div>
+                    <div><strong>ວັນທີສ້າງລາຍງານ (Date Generated):</strong> ${new Date().toLocaleDateString('lo-LA')}</div>
                 </div>
             `;
+
+            // Initialize Leaflet Map if coordinates exist
+            if (hasValidCoords) {
+                setTimeout(() => {
+                    if (mapInstance) {
+                        mapInstance.remove();
+                    }
+                    mapInstance = L.map('map', {
+                        zoomControl: false,
+                        attributionControl: false
+                    }).setView([lat, lon], 12);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 18
+                    }).addTo(mapInstance);
+
+                    L.marker([lat, lon]).addTo(mapInstance)
+                        .bindPopup(`<b>ບ້ານ ${d['4.ຊື່ບ້ານ'] || ''}</b><br>Lat: ${lat}<br>Lon: ${lon}`)
+                        .openPopup();
+
+                    setTimeout(() => mapInstance.invalidateSize(), 200);
+                }, 50);
+            }
         }
     </script>
 </body>
+
 </html>
