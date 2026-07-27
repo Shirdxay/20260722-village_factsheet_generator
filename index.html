@@ -403,12 +403,12 @@
 
         // Automatic load from local folder on initialization
         window.addEventListener('DOMContentLoaded', () => {
-            fetch('./20260604-export.xlsx')
+            fetch('./20260727-export.xlsx')
                 .then(res => {
                     if (!res.ok) throw new Error("File not found");
                     return res.arrayBuffer();
                 })
-                .then(buffer => processExcelBuffer(buffer, "20260604-export.xlsx (Auto-loaded)"))
+                .then(buffer => processExcelBuffer(buffer, "20260727-export.xlsx (Auto-loaded)"))
                 .catch(() => {
                     document.getElementById('statusText').innerText = "Manual file selection required.";
                 });
