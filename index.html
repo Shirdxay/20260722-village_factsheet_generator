@@ -69,10 +69,74 @@
             padding: 8px 12px;
             border-radius: 6px;
             margin-bottom: 12px;
-            display: flex;
+            display: none; /* Hidden by default; shown only if auto-load fails */
             align-items: center;
             justify-content: space-between;
             gap: 15px;
+        }
+
+        .search-box-section {
+            background: var(--primary-light);
+            border: 1px solid #bfdbfe;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+
+        .search-box-section label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .search-box-section input {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background-color: #fff;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .search-box-section input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Search Results Dropdown Container */
+        .search-results-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 12px;
+            right: 12px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 0 0 6px 6px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .search-result-item {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--bg-gray);
+            cursor: pointer;
+            transition: background 0.1s ease;
+        }
+
+        .search-result-item:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
         }
 
         .filter-grid {
@@ -350,12 +414,20 @@
             <button class="btn-print" onclick="window.print()">Print / Export PDF</button>
         </div>
 
-        <div class="file-upload-section">
+        <!-- File Upload Section (Shown only if auto-load fails) -->
+        <div class="file-upload-section" id="fileUploadSection">
             <div style="font-size: 0.85rem;">
                 <label for="excelFile" style="font-weight: 600; margin-right: 8px;">Select Excel File:</label>
                 <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFileUpload(event)">
             </div>
             <span id="statusText" style="font-size: 0.82rem; color: var(--text-muted);">Attempting auto-load...</span>
+        </div>
+
+        <!-- Direct Search Bar with Result Dropdown List -->
+        <div class="search-box-section">
+            <label for="searchInput">ຄົ້ນຫາຊື່ບ້ານ ຫຼື ລະຫັດບ້ານ (Search Village - Code/Name)</label>
+            <input type="text" id="searchInput" placeholder="ພິມຊື່ບ້ານ ຫຼື ລະຫັດບ້ານເພື່ອຄົ້ນຫາ..." oninput="onSearchInput()" disabled autocomplete="off">
+            <div id="searchResultsDropdown" class="search-results-dropdown"></div>
         </div>
 
         <div class="filter-grid">
@@ -392,7 +464,7 @@
             <h2 style="font-weight: 600; font-size: 1.1rem; color: var(--text-dark);">Please select a village to
                 generate the factsheet</h2>
             <p style="margin-top: 8px; font-size: 0.85rem;">Choose from Batch, Province, District, and Village using the
-                filters above.</p>
+                filters above, or use the search bar.</p>
         </div>
     </div>
 
@@ -410,8 +482,17 @@
                 })
                 .then(buffer => processExcelBuffer(buffer, "20260727-export.xlsx (Auto-loaded)"))
                 .catch(() => {
-                    document.getElementById('statusText').innerText = "Manual file selection required.";
+                    // Show upload section if auto-load fails
+                    document.getElementById('fileUploadSection').style.display = 'flex';
+                    document.getElementById('statusText').innerText = "Auto-load failed. Manual file selection required.";
                 });
+
+            // Close search dropdown if clicked outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box-section')) {
+                    document.getElementById('searchResultsDropdown').style.display = 'none';
+                }
+            });
         });
 
         function handleFileUpload(e) {
@@ -435,9 +516,8 @@
                 buildHierarchy();
                 populateBatches();
 
-                document.getElementById('statusText').innerText = `Loaded: ${filename} (${rawData.length} records)`;
-                document.getElementById('statusText').style.color = '#0f766e';
                 document.getElementById('batchSelect').disabled = false;
+                document.getElementById('searchInput').disabled = false;
             } catch (err) {
                 alert("Error reading Excel file: " + err.message);
             }
@@ -473,6 +553,7 @@
             resetSelect('provinceSelect', '-- ເລືອກແຂວງ --');
             resetSelect('districtSelect', '-- ເລືອກເມືອງ --');
             resetSelect('villageSelect', '-- ເລືອກບ້ານ --');
+            document.getElementById('searchInput').value = '';
         }
 
         function onBatchChange() {
@@ -540,6 +621,82 @@
 
             if (vIndex !== "" && hierarchy[batch][prov][dist][vIndex]) {
                 renderFactsheet(hierarchy[batch][prov][dist][vIndex]);
+            }
+        }
+
+        // Search Input handler showing dropdown list with Code - Name - Batch - District - Province
+        function onSearchInput() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const dropdown = document.getElementById('searchResultsDropdown');
+            dropdown.innerHTML = '';
+
+            if (!query) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            // Filter rawData matching name, village id, or sdc village code
+            const matches = rawData.filter(item => {
+                const villageName = (item['4.ຊື່ບ້ານ'] || '').toString().toLowerCase();
+                const villageId = (item['ລະຫັດບ້ານ'] || '').toString().toLowerCase();
+                const sdcId = (item['SDC village'] || '').toString().toLowerCase();
+                
+                return villageName.includes(query) || villageId.includes(query) || sdcId.includes(query);
+            }).slice(0, 50); // Limit results to 50 items for performance
+
+            if (matches.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            matches.forEach(item => {
+                const code = item['ລະຫັດບ້ານ'] || item['SDC village'] || '-';
+                const name = item['4.ຊື່ບ້ານ'] || '-';
+                const batch = item['7.ງວດຈັດຕັ້ງປະຕິບັດ:'] || '-';
+                const district = item['2.ຊື່ເມືອງ'] || '-';
+                const province = item['1.ຊື່ແຂວງ'] || '-';
+
+                const div = document.createElement('div');
+                div.className = 'search-result-item';
+                div.innerHTML = `<strong>${code}</strong> - ${name} | ງວດ ${batch} | ເມືອງ ${district} | ແຂວງ ${province}`;
+                
+                div.onclick = () => {
+                    selectMatchedVillage(item);
+                    document.getElementById('searchInput').value = `${code} - ${name}`;
+                    dropdown.style.display = 'none';
+                };
+                
+                dropdown.appendChild(div);
+            });
+
+            dropdown.style.display = 'block';
+        }
+
+        function selectMatchedVillage(matchedRecord) {
+            renderFactsheet(matchedRecord);
+            
+            // Sync cascading dropdowns
+            const batch = (matchedRecord['7.ງວດຈັດຕັ້ງປະຕິບັດ:'] || '').toString().trim();
+            const prov = (matchedRecord['1.ຊື່ແຂວງ'] || '').toString().trim();
+            const dist = (matchedRecord['2.ຊື່ເມືອງ'] || '').toString().trim();
+
+            if (batch && hierarchy[batch]) {
+                document.getElementById('batchSelect').value = batch;
+                onBatchChange();
+            }
+            if (prov && hierarchy[batch]?.[prov]) {
+                document.getElementById('provinceSelect').value = prov;
+                onProvinceChange();
+            }
+            if (dist && hierarchy[batch]?.[prov]?.[dist]) {
+                document.getElementById('districtSelect').value = dist;
+                onDistrictChange();
+                
+                const villagesInDist = hierarchy[batch][prov][dist];
+                const vIndex = villagesInDist.findIndex(v => v === matchedRecord);
+                if (vIndex !== -1) {
+                    document.getElementById('villageSelect').value = vIndex;
+                }
             }
         }
 
